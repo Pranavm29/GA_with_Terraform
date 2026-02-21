@@ -24,8 +24,10 @@ jobs:
           pylint app/app.py || true
       - name: Run App
         run: |
-          nohup python3 app.py > app.log 2>&1 &
+          cd $GITHUB_WORKSPACE
+          nohup python3 app/app.py > app.log 2>&1 &
 
       - name: Run Tests
         run: |
-          python -m unittest discover tests
+          cd $GITHUB_WORKSPACE
+          python3 -m unittest discover tests
