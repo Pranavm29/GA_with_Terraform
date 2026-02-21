@@ -6,28 +6,51 @@ on:
     branches: [main]
 
 jobs:
-  build-test:
-    runs-on: self-hosted   # <-- this will run on the EC2 runner spun up by Terraform
+  build-test-deploy:
+    runs-on: self-hosted  # Your EC2 runner
 
     steps:
+      # 1️⃣ Checkout the repository
       - name: Checkout Code
         uses: actions/checkout@v4
 
+      # 2️⃣ Install Python3 & pip3 (in case runner doesn't have it)
+      - name: Install Python3 & pip3
+        run: |
+          sudo yum update -y
+          sudo yum install -y python3 python3-pip
+          python3 --version
+          pip3 --version
+
+      # 3️⃣ Install dependencies
       - name: Install Dependencies
         run: |
-           pip3 install --upgrade pip
-           pip3 install -r app/requirements.txt
-           pip3 install pylint
+          pip3 install --upgrade pip
+          pip3 install -r app/requirements.txt
+          pip3 install pylint flask
 
+      # 4️⃣ Run Lint (won't fail the pipeline)
       - name: Run Lint
         run: |
           pylint app/app.py || true
-      - name: Run App
-        run: |
-          cd $GITHUB_WORKSPACE
-          nohup python3 app/app.py > app.log 2>&1 &
 
+      # 5️⃣ Run Unit Tests
       - name: Run Tests
         run: |
-          cd $GITHUB_WORKSPACE
           python3 -m unittest discover tests
+
+      # 6️⃣ Start Flask app persistently
+      - name: Start Flask App
+        run: |
+          cd $GITHUB_WORKSPACE
+          # Kill previous instance if running
+          pkill -f app/app.py || true
+          # Start app in background detached from shell
+          nohup python3 app/app.py > app.log 2>&1 &
+          disown
+
+      # 7️⃣ Verify Flask is listening
+      - name: Check Flask
+        run: |
+          sleep 3
+          sudo netstat -tulnp | grep 5000 || echo "Flask not listening yet"
