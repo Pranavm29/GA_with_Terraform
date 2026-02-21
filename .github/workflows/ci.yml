@@ -15,8 +15,8 @@ jobs:
 
       - name: Install Dependencies
         run: |
-          pip install -r app/requirements.txt
-          pip install pylint
+          python3 pip install -r app/requirements.txt
+          python3 pip install pylint
 
       - name: Run Lint
         run: |
