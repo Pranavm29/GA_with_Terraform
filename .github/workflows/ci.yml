@@ -1,14 +1,13 @@
 name: CI-CD Pipeline
 
 on:
-  push:
-    branches:
-      - main
   pull_request:
+    types: [opened, closed, synchronize]
+    branches: [main]
 
 jobs:
   build-test:
-    runs-on: ubuntu-latest
+    runs-on: self-hosted   # <-- this will run on the EC2 runner spun up by Terraform
 
     steps:
       - name: Checkout Code
@@ -27,30 +26,10 @@ jobs:
       - name: Run Lint
         run: |
           pylint app/app.py
+      - name: Run App
+        run: |
+          nohup python3 app.py > app.log 2>&1 &
 
       - name: Run Tests
         run: |
           python -m unittest discover tests
-
-  deploy:
-    needs: build-test
-    runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main'
-
-    steps:
-      - name: Checkout Code
-        uses: actions/checkout@v4
-
-      - name: Deploy to EC2
-        uses: appleboy/ssh-action@v1.0.3
-        with:
-          host: ${{ secrets.EC2_HOST }}
-          username: ${{ secrets.EC2_USER }}
-          key: ${{ secrets.EC2_SSH_KEY }}
-          script: |
-            sudo yum install -y python3 git
-            rm -rf sre-demo || true
-            git clone https://github.com/YOUR_USERNAME/YOUR_REPO.git sre-demo
-            cd sre-demo/app
-            pip3 install -r requirements.txt
-            nohup python3 app.py > app.log 2>&1 &
